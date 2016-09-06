@@ -41,35 +41,35 @@ void loop()
     Serial.print("initial count = ");
     Serial.println(c_start);
 
-	if (test_reps > 0)
-	{
-	    unsigned long t_start = micros();
-    	for (int i = 0; i < test_reps; i++)
-	    {
-	        digitalWrite(test_signal_pin, HIGH);
-	        digitalWrite(test_signal_pin, LOW);
-	    }
-	    unsigned long t_end = micros();
+    if (test_reps > 0)
+    {
+        unsigned long t_start = micros();
+        for (int i = 0; i < test_reps; i++)
+        {
+            digitalWrite(test_signal_pin, HIGH);
+            digitalWrite(test_signal_pin, LOW);
+        }
+        unsigned long t_end = micros();
 
-	    Serial.print("generate ");
-	    Serial.print(test_reps);
-	    Serial.print(" test pulses in ");
-	    Serial.print(t_end - t_start);
-	    Serial.println(" us");
-	}
+        Serial.print("generate ");
+        Serial.print(test_reps);
+        Serial.print(" test pulses in ");
+        Serial.print(t_end - t_start);
+        Serial.println(" us");
+    }
 
-	delay(count_delay);
+    delay(count_delay);
     unsigned int c_end = TCNT1;
 
-	Serial.print("wait ");
-	Serial.print(count_delay);
-	Serial.println(" ms");
+    Serial.print("wait ");
+    Serial.print(count_delay);
+    Serial.println(" ms");
 
     Serial.print("final count = ");
     Serial.print(c_end);
-	Serial.print(" (+");
-	Serial.print(c_end - c_start);
-	Serial.println(")");
+    Serial.print(" (+");
+    Serial.print(c_end - c_start);
+    Serial.println(")");
 
     delay(loop_delay);
 }
