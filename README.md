@@ -1,1 +1,1 @@
-# arduino-examples
+# Software-defined instruments (lab equipment)
