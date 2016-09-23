@@ -1,8 +1,9 @@
+#define LAN
 #define MSGLEN 64  // includes null-terminator
 #define PORT   18
 
 #include "eeprom/shared.h"  // includes EEPROM.h
-#include "comm.h"
+#include "comm.h"           // includes Ethernet.h, if enabled
 #include "parse.h"
 
 const unsigned long conf_commit             = 0x1234abc;  // edit to match current commit before compile/download!
@@ -10,6 +11,7 @@ const float         conf_clock_freq_int     = 2e6;        // board-dependent, as
 const byte          conf_clock_pin          = 12;         // board-dependent
 const byte          conf_trig_pin           = 2;          // pin must support low-level interrupts
 const float         conf_start_us           = 10.0;
+const unsigned int  conf_dhcp_cycles        = 1000;
 const unsigned long conf_measure_ms         = 500;
 const byte          conf_pulse_pin  [NCHAN] = {8, 7, 6, 5};
 byte *              conf_pulse_port [NCHAN] = {&PORTB, &PORTE, &PORTD, &PORTC};  // board-dependent, must match pulse_pin
@@ -18,11 +20,12 @@ const byte          conf_pulse_mask [NCHAN] = {1 << 4, 1 << 6, 1 << 7, 1 << 6}; 
 // SCPI commands:
 //   *IDN?                 model and version
 //   *TRG                  soft trigger, independent of :TRIG:ARMed
-//   *SAV                  save settings to EEPROM
-//   *RCL                  recall EEPROM settings (also performed on startup)
-//   *RST                  reset to default settings
+//   *SAV                  save settings to EEPROM (LAN excluded)
+//   *RCL                  recall EEPROM settings (also performed on startup) (LAN excluded)
+//   *RST                  reset to default settings (LAN excluded)
 //   :CLOCK:FREQ:INTernal  ideal internal frequency in Hz
 //   :CLOCK:FREQ:MEASure   measured frequency in Hz of currently-configured clock
+//   :LAN:IP               current ip address
 
 // persistent SCPI settings:
 SCPI scpi;
@@ -33,6 +36,9 @@ volatile long scpi_trig_count;          // :TRIG:COUNT      hardware triggers de
 volatile bool scpi_trig_armed;          // :TRIG:ARMed      armed (read/write)
 volatile bool scpi_trig_ready;          // :TRIG:READY      ready (armed plus at least one valid channel)
 bool          scpi_pulse_valid[NCHAN];  // :PULSe<n>:VALid  output channel has valid/usable pulse sequence
+#ifdef LAN
+byte          scpi_lan_mode;            // :LAN:MODE        actual mode (writes go to scpi_lan.mode)
+#endif
 
 unsigned long          k_delay  [NCHAN];
 unsigned long          k_width  [NCHAN];
@@ -43,6 +49,11 @@ volatile bool          x_next   [NCHAN];
 volatile int           N_active;
 volatile unsigned long k_cur;
 volatile unsigned int  c_cur;
+
+#ifdef LAN
+EthernetServer server(PORT);
+unsigned int countdown_dhcp;
+#endif
 
 void setup()
 {
@@ -64,15 +75,56 @@ void setup()
     update_trig_edge();  // actually configure interrupt
 
     Serial.begin(9600);
+
+#ifdef LAN
+    SCPI_LAN scpi_lan;
+    EEPROM.get(EPA_SCPI_LAN, scpi_lan);
+
+    scpi_lan_mode = scpi_lan.mode;
+    if (scpi_lan_mode == LAN_DHCP)
+    {
+        Ethernet.begin(scpi_lan.mac);
+        countdown_dhcp = conf_dhcp_cycles;
+    }
+    else if (scpi_lan_mode == LAN_STATIC)
+    {
+        const byte dns[4] = {0, 0, 0, 0};  // DNS is not used
+        Ethernet.begin(scpi_lan.mac, scpi_lan.ip_static, dns, scpi_lan.gateway_static, scpi_lan.subnet_static);
+    }
+#endif
 }
 
 void loop()
 {
     if (Serial.available() > 0)
     {
+        lan = 0;  // receive/send via Serial
         char msg[MSGLEN];
         if (recv_msg(msg)) { parse_msg(msg); }
     }
+
+#ifdef LAN
+    if (scpi_lan_mode != LAN_OFF)
+    {
+        client = server.available();
+        if (client)
+        {
+            lan = 1;  // receive/send via client
+            char msg[MSGLEN];
+            if (recv_msg(msg)) { parse_msg(msg); }
+        }
+    }
+
+    if (scpi_lan_mode == LAN_DHCP)
+    {
+        if (countdown_dhcp == 0)
+        {
+            Ethernet.maintain();
+            countdown_dhcp = conf_dhcp_cycles;
+        }
+        else { countdown_dhcp--; }
+    }
+#endif
 
     delay(1);
 }
@@ -247,6 +299,7 @@ void parse_msg(const char *msg)
     else if (start(msg, ":CLOCK",          rest)) { parse_clock(rest);                          }
     else if (start(msg, ":TRIG",           rest)) { parse_trig(rest);                           }
     else if (start(msg, ":PULSE", ":PULS", rest)) { parse_pulse(rest);                          }
+    else if (start(msg, ":LAN",            rest)) { parse_lan(rest);                            }
     else                                          { send_eps(EPA_REPLY_INVALID_CMD);            }
 
     if (update)
@@ -400,4 +453,81 @@ void parse_pulse(const char *rest)
         }
     }
     else                                                     { send_eps(EPA_REPLY_INVALID_CMD);        }
+}
+
+void parse_lan(const char *rest)
+{
+    char arg[MSGLEN];
+    bool update = 0;
+
+    SCPI_LAN scpi_lan;
+    EEPROM.get(EPA_SCPI_LAN, scpi_lan);
+
+    if (equal(rest, ":MODE?"))
+    {
+        send_str(scpi_lan.mode == LAN_OFF ? "OFF" : (scpi_lan.mode == LAN_DHCP ? "DHCP" : "STATIC"), NOEOL);
+        send_str(" (ACTUAL: ",                                                                        NOEOL);
+#ifdef LAN
+        send_str(scpi_lan_mode == LAN_OFF ? "OFF" : (scpi_lan_mode == LAN_DHCP ? "DHCP" : "STATIC"), NOEOL);
+#else
+        send_str("NOT AVAILABLE",                                                                    NOEOL);
+#endif
+        send_str(")");
+    }
+    else if (start(rest, ":MODE ", arg))
+    {
+        if      (equal(arg, "OFF"))                                 { scpi_lan.mode = LAN_OFF;    update = 1; }
+        else if (equal(arg, "DHCP"))                                { scpi_lan.mode = LAN_DHCP;   update = 1; }
+        else if (equal(arg, "STATIC", "STAT"))                      { scpi_lan.mode = LAN_STATIC; update = 1; }
+        else                                                        { send_eps(EPA_REPLY_INVALID_ARG);        }
+
+    }
+    else if (equal(rest, ":MAC?"))                                  { send_mac(scpi_lan.mac);                 }
+    else if (start(rest, ":MAC ", arg))
+    {
+        if (parse_mac(arg, scpi_lan.mac))                           { update = 1;   }
+        else                                                        { send_eps(EPA_REPLY_INVALID_ARG);        }
+    }
+    else if (equal(rest, ":IP?"))
+    {
+        byte addr[4] = {0, 0, 0, 0};
+#ifdef LAN
+        if (scpi_lan_mode != LAN_OFF)
+        {
+            IPAddress local_ip = Ethernet.localIP();
+            for (int i = 0; i < 4; i++) { addr[i] = local_ip[i]; }
+        }
+#endif
+        send_ip(addr);
+    }
+    else if (start(rest, ":IP ",                             NULL)) { send_eps(EPA_REPLY_READONLY);           }
+    else if (equal(rest, ":IP:STATIC?", ":IP:STAT?"))               { send_ip(scpi_lan.ip_static);            }
+    else if (start(rest, ":IP:STATIC ", ":IP:STAT ",          arg))
+    {
+        if (parse_ip(arg, scpi_lan.ip_static))                      { update = 1;                             }
+        else                                                        { send_eps(EPA_REPLY_INVALID_ARG);        }
+    }
+    else if (equal(rest, ":GATEWAY:STATIC?", ":GATE:STATIC?")
+          || equal(rest, ":GATEWAY:STAT?",   ":GATE:STAT?"))        { send_ip(scpi_lan.gateway_static);       }
+    else if (start(rest, ":GATEWAY:STATIC ", ":GATE:STATIC ", arg)
+          || start(rest, ":GATEWAY:STAT ",   ":GATE:STAT ",   arg))
+    {
+        if (parse_ip(arg, scpi_lan.gateway_static))                 { update = 1;                             }
+        else                                                        { send_eps(EPA_REPLY_INVALID_ARG);        }
+    }
+    else if (equal(rest, ":SUBNET:STATIC?", ":SUB:STATIC?")
+          || equal(rest, ":SUBNET:STAT?",   ":SUB:STAT?"))          { send_ip(scpi_lan.subnet_static);        }
+    else if (start(rest, ":SUBNET:STATIC ", ":SUB:STATIC ",   arg)
+          || start(rest, ":SUBNET:STAT ",   ":SUB:STAT ",     arg))
+    {
+        if (parse_ip(arg, scpi_lan.subnet_static))                  { update = 1;                             }
+        else                                                        { send_eps(EPA_REPLY_INVALID_ARG);        }
+    }
+    else                                                            { send_eps(EPA_REPLY_INVALID_CMD);        }
+
+    if (update)
+    {
+        EEPROM.put(EPA_SCPI_LAN, scpi_lan);  // save immediately
+        send_eps(EPA_REPLY_REBOOT);
+    }
 }
