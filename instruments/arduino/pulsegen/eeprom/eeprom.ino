@@ -1,4 +1,3 @@
-#include <EEPROM.h>
 #include "shared.h"
 
 const unsigned long conf_commit                    = 0x1234abc;  // edit to match current commit before compile/download!
@@ -40,7 +39,7 @@ void loop()
     SCPI scpi;
     EEPROM.get(EPA_SCPI, scpi);
 
-    Serial.print("EA_SCPI/");
+    Serial.print("EPA_SCPI/");
     Serial.print(EPA_SCPI);
     Serial.print("/");
     Serial.print(sizeof(scpi));

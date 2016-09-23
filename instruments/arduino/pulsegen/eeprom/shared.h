@@ -1,3 +1,5 @@
+#include <EEPROM.h>
+
 #define NCHAN 4
 #define ESLEN 40  // includes null-terminator
 
