@@ -7,10 +7,10 @@
 #include "parse.h"
 
 const unsigned long conf_commit             = 0x1234abc;  // edit to match current commit before compile/download!
-const float         conf_clock_freq_int     = 2e6;        // board-dependent, assumes prescaler set to /8
+const long          conf_clock_freq_int     = 2000000;    // board-dependent, assumes prescaler set to /8
 const byte          conf_clock_pin          = 12;         // board-dependent
 const byte          conf_trig_pin           = 2;          // pin must support low-level interrupts
-const float         conf_start_us           = 10.0;
+const unsigned int  conf_start_us           = 10;
 const unsigned int  conf_dhcp_cycles        = 1000;
 const unsigned long conf_measure_ms         = 500;
 const byte          conf_pulse_pin  [NCHAN] = {8, 7, 6, 5};
@@ -31,7 +31,7 @@ const byte          conf_pulse_mask [NCHAN] = {1 << 4, 1 << 6, 1 << 7, 1 << 6}; 
 SCPI scpi;
 
 // runtime SCPI variables (read-only except where noted):
-float         scpi_clock_freq;          // :CLOCK:FREQ      ideal frequency in Hz of currently-configure clock
+long          scpi_clock_freq;          // :CLOCK:FREQ      ideal frequency in Hz of currently-configure clock
 volatile long scpi_trig_count;          // :TRIG:COUNT      hardware triggers detected since reboot
 volatile bool scpi_trig_armed;          // :TRIG:ARMed      armed (read/write)
 volatile bool scpi_trig_ready;          // :TRIG:READY      ready (armed plus at least one valid channel)
@@ -201,7 +201,7 @@ void pulse_write(const int n, const bool x)  // TESTING: a bit quicker than digi
     else   { *conf_pulse_port[n] &= ~conf_pulse_mask[n]; }
 }
 
-float measure_freq()
+long measure_freq()
 {
     unsigned long t = millis();
     unsigned int  c = TCNT1;
@@ -214,7 +214,7 @@ float measure_freq()
         k += c_diff;
     }
 
-    return 1e3 * float(k) / float(conf_measure_ms);
+    return (1000 * k) / conf_measure_ms;
 }
 
 // runtime update functions:
@@ -239,12 +239,14 @@ bool update_pulse(const int n)
 {
     pulse_write(n, scpi.pulse_invert[n]);  // if inverting, then set initial value HIGH	
 
-    k_delay[n]  = scpi_clock_freq * scpi.pulse_delay[n];
-    k_width[n]  = scpi_clock_freq * min(scpi.pulse_width[n], scpi.pulse_period[n]);
-    k_period[n] = scpi_clock_freq * scpi.pulse_period[n];
+    float scpi_clock_freq_MHz = float(scpi_clock_freq) / 1e6;
+
+    k_delay[n]  = scpi_clock_freq_MHz * scpi.pulse_delay[n];
+    k_width[n]  = scpi_clock_freq_MHz * min(scpi.pulse_width[n], scpi.pulse_period[n]);
+    k_period[n] = scpi_clock_freq_MHz * scpi.pulse_period[n];
     k_end[n]    = k_delay[n] + k_period[n] * scpi.pulse_cycles[n];
 
-    return scpi_pulse_valid[n] = (scpi_clock_freq * (scpi.pulse_delay[n] + scpi.pulse_period[n] * scpi.pulse_cycles[n]) < 4e9);  // calculate with floats
+    return scpi_pulse_valid[n] = (scpi_clock_freq_MHz * (float(scpi.pulse_delay[n]) + float(scpi.pulse_period[n]) * scpi.pulse_cycles[n]) < 4e9);  // calculate with floats
 }
 
 bool update_pulse_all()
@@ -256,7 +258,7 @@ bool update_pulse_all()
 
 void update_trig_ready()
 {
-    k_cur = scpi_clock_freq * conf_start_us / 1e6;  // account for interrupt processing time
+    k_cur = (scpi_clock_freq * conf_start_us) / 1000000;  // account for interrupt processing time
     N_active = 0;
 
     for (int n = 0; n < NCHAN; n++)
@@ -328,16 +330,16 @@ void parse_clock(const char *rest)
         else                                                      { send_eps(EPA_REPLY_INVALID_ARG);                                }
 
     }
-    else if (equal(rest, ":FREQ?"))                               { send_float(scpi_clock_freq);                                    }
+    else if (equal(rest, ":FREQ?"))                               { send_int(scpi_clock_freq);                                      }
     else if (start(rest, ":FREQ ",                         NULL)) { send_eps(EPA_REPLY_READONLY);                                   }
-    else if (equal(rest, ":FREQ:MEASURE?",  ":FREQ:MEAS?"))       { send_float(measure_freq());                                     }
+    else if (equal(rest, ":FREQ:MEASURE?",  ":FREQ:MEAS?"))       { send_int(measure_freq());                                       }
     else if (start(rest, ":FREQ:MEASURE ",  ":FREQ:MEAS ", NULL)) { send_eps(EPA_REPLY_READONLY);                                   }
-    else if (equal(rest, ":FREQ:INTERNAL?", ":FREQ:INT?"))        { send_float(conf_clock_freq_int);                                }
+    else if (equal(rest, ":FREQ:INTERNAL?", ":FREQ:INT?"))        { send_int(conf_clock_freq_int);                                  }
     else if (start(rest, ":FREQ:INTERNAL ", ":FREQ:INT ",  NULL)) { send_eps(EPA_REPLY_READONLY);                                   }
-    else if (equal(rest, ":FREQ:EXTERNAL?", ":FREQ:EXT?"))        { send_float(scpi.clock_freq_ext);                                }
+    else if (equal(rest, ":FREQ:EXTERNAL?", ":FREQ:EXT?"))        { send_int(scpi.clock_freq_ext);                                  }
     else if (start(rest, ":FREQ:EXTERNAL ", ":FREQ:EXT ",  arg))
     {
-        if (parse_float(arg, scpi.clock_freq_ext, ZERO_NOK))      { update = 1;                                                     }
+        if (parse_num(arg, scpi.clock_freq_ext, ZERO_NOK))        { update = 1;                                                     }
         else                                                      { send_eps(EPA_REPLY_INVALID_ARG);                                }
     }
     else                                                          { send_eps(EPA_REPLY_INVALID_CMD);                                }
@@ -408,40 +410,40 @@ void parse_pulse(const char *rest)
     if (n != -1)
     {
         const char *rest_p = rest + 1;  // safe because we know strlen(rest) > 0
-        if      (equal(rest_p, ":DELAY?", ":DEL?"))               { send_float(scpi.pulse_delay[n]);      }
+        if      (equal(rest_p, ":DELAY?", ":DEL?"))                { send_micros(scpi.pulse_delay[n]);     }
         else if (start(rest_p, ":DELAY ", ":DEL ",  arg))
         {
-            if (parse_float(arg, scpi.pulse_delay[n]))            { update = 1;                           }
-            else                                                  { send_eps(EPA_REPLY_INVALID_ARG);      }
+            if (parse_micros(arg, scpi.pulse_delay[n], ZERO_OK))   { update = 1;                           }
+            else                                                   { send_eps(EPA_REPLY_INVALID_ARG);      }
         }
-        else if (equal(rest_p, ":WIDTH?", ":WID?"))               { send_float(scpi.pulse_width[n]);      }
+        else if (equal(rest_p, ":WIDTH?", ":WID?"))                { send_micros(scpi.pulse_width[n]);     }
         else if (start(rest_p, ":WIDTH ", ":WID ",  arg))
         {
-            if (parse_float(arg, scpi.pulse_width[n], ZERO_NOK))  { update = 1;                           }
-            else                                                  { send_eps(EPA_REPLY_INVALID_ARG);      }
+            if (parse_micros(arg, scpi.pulse_width[n], ZERO_NOK))  { update = 1;                           }
+            else                                                   { send_eps(EPA_REPLY_INVALID_ARG);      }
         }
-        else if (equal(rest_p, ":PERIOD?", ":PER?"))              { send_float(scpi.pulse_period[n]);     }
+        else if (equal(rest_p, ":PERIOD?", ":PER?"))               { send_micros(scpi.pulse_period[n]);    }
         else if (start(rest_p, ":PERIOD ", ":PER ", arg))
         {
-            if (parse_float(arg, scpi.pulse_period[n], ZERO_NOK)) { update = 1;                           }
-            else                                                  { send_eps(EPA_REPLY_INVALID_ARG);      }
+            if (parse_micros(arg, scpi.pulse_period[n], ZERO_NOK)) { update = 1;                           }
+            else                                                   { send_eps(EPA_REPLY_INVALID_ARG);      }
         }
-        else if (equal(rest_p, ":CYCLES?", ":CYC?"))              { send_int(scpi.pulse_cycles[n]);       }
+        else if (equal(rest_p, ":CYCLES?", ":CYC?"))               { send_int(scpi.pulse_cycles[n]);       }
         else if (start(rest_p, ":CYCLES ", ":CYC ", arg))
         {
-            if (parse_int(arg, scpi.pulse_cycles[n]))             { update = 1; }
-            else                                                  { send_eps(EPA_REPLY_INVALID_ARG);      }
+            if (parse_num(arg, scpi.pulse_cycles[n], ZERO_OK))     { update = 1; }
+            else                                                   { send_eps(EPA_REPLY_INVALID_ARG);      }
         }
-        else if (equal(rest_p, ":INVERT?", ":INV?"))              { send_hex(scpi.pulse_invert[n]);       }
+        else if (equal(rest_p, ":INVERT?", ":INV?"))               { send_hex(scpi.pulse_invert[n]);       }
         else if (start(rest_p, ":INVERT ", ":INV ", arg))
         {
-            if      (equal(arg, "1"))                             { scpi.pulse_invert[n] = 1; update = 1; }
-            else if (equal(arg, "0"))                             { scpi.pulse_invert[n] = 0; update = 1; }
-            else                                                  { send_eps(EPA_REPLY_INVALID_ARG);      }
+            if      (equal(arg, "1"))                              { scpi.pulse_invert[n] = 1; update = 1; }
+            else if (equal(arg, "0"))                              { scpi.pulse_invert[n] = 0; update = 1; }
+            else                                                   { send_eps(EPA_REPLY_INVALID_ARG);      }
         }
-        else if (equal(rest_p, ":VALID?", ":VAL?"))               { send_hex(scpi_pulse_valid[n]);        }
-        else if (start(rest_p, ":VALID ", ":VAL ", NULL))         { send_eps(EPA_REPLY_READONLY);         }
-        else                                                      { send_eps(EPA_REPLY_INVALID_CMD);      }
+        else if (equal(rest_p, ":VALID?", ":VAL?"))                { send_hex(scpi_pulse_valid[n]);        }
+        else if (start(rest_p, ":VALID ", ":VAL ", NULL))          { send_eps(EPA_REPLY_READONLY);         }
+        else                                                       { send_eps(EPA_REPLY_INVALID_CMD);      }
 
         if (update)
         {
@@ -452,7 +454,7 @@ void parse_pulse(const char *rest)
             else    { send_eps(EPA_REPLY_CHECK); }
         }
     }
-    else                                                     { send_eps(EPA_REPLY_INVALID_CMD);        }
+    else                                                           { send_eps(EPA_REPLY_INVALID_CMD);        }
 }
 
 void parse_lan(const char *rest)

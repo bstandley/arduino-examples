@@ -20,15 +20,15 @@
 
 struct SCPI
 {
-    byte  clock_src;             // :CLOCK:SRC            INTernal or EXTernal
-    float clock_freq_ext;        // :CLOCK:FREQ:EXTernal  ideal external frequency in Hz -- max 5e6
-    byte  trig_edge;             // :TRIG:EDGE            RISing or FALLing
-    bool  trig_rearm;            // :TRIG:REARM           rearm after pulse sequence and on reboot
-    float pulse_delay  [NCHAN];  // :PULSe<n>:DELay       delay to first pulse in sec
-    float pulse_width  [NCHAN];  // :PULSe<n>:WIDth       pulse width in sec
-    float pulse_period [NCHAN];  // :PULSe<n>:PERiod      pulse period in sec
-    long  pulse_cycles [NCHAN];  // :PULSe<n>:CYCles      number of pulses
-    bool  pulse_invert [NCHAN];  // :PULSe<n>:INVert      0 = non-inverting, 1 = inverting
+    byte clock_src;             // :CLOCK:SRC            INTernal or EXTernal
+    long clock_freq_ext;        // :CLOCK:FREQ:EXTernal  ideal external frequency in Hz -- max 5e6
+    byte trig_edge;             // :TRIG:EDGE            RISing or FALLing
+    bool trig_rearm;            // :TRIG:REARM           rearm after pulse sequence and on reboot
+    long pulse_delay  [NCHAN];  // :PULSe<n>:DELay       delay to first pulse is s (stored in us)
+    long pulse_width  [NCHAN];  // :PULSe<n>:WIDth       pulse width in s (stored in us)
+    long pulse_period [NCHAN];  // :PULSe<n>:PERiod      pulse period in s (stored in us)
+    long pulse_cycles [NCHAN];  // :PULSe<n>:CYCles      number of pulses
+    bool pulse_invert [NCHAN];  // :PULSe<n>:INVert      0 = non-inverting, 1 = inverting
 };
 
 struct SCPI_LAN
@@ -41,7 +41,6 @@ struct SCPI_LAN
 };
 
 // notes on SCPI settings:
-//   - exponents in floating-point values are not supported (TODO)
 //   - bool values must be 0 or 1
 //   - <n> in pulse configs is {1, 2, 3, 4} for outputs {A, B, C, D}
 //   - abbreviations are supported where noted, e.g WIDth matches both WID and WIDTH
@@ -52,15 +51,15 @@ struct SCPI_LAN
 void scpi_default(SCPI &s)
 {
     s.clock_src      = INTERNAL;
-    s.clock_freq_ext = 1e6;
+    s.clock_freq_ext = 1000000;
     s.trig_edge      = RISING;
     s.trig_rearm     = 1;
 
     for (int n = 0; n < NCHAN; n++)
     {
-        s.pulse_delay[n]  = 0.0;
-        s.pulse_width[n]  = 0.01;
-        s.pulse_period[n] = 0.02;
+        s.pulse_delay[n]  = 0;
+        s.pulse_width[n]  = 10000;
+        s.pulse_period[n] = 20000;
         s.pulse_cycles[n] = (n == 0);
         s.pulse_invert[n] = 0;
     }

@@ -1,30 +1,54 @@
-#define ZERO_OK  1  // default behavior when omitted
+#define ZERO_OK  1
 #define ZERO_NOK 0
 
-bool parse_int(const char *str, long &dest, bool zero_ok)
+long pow10(const long x, const int z)
 {
-    long value = atoi(str);
-    if (value > 0 || (str[0] == '0' && zero_ok))  // value == 0 could come from a conversion error
+    long y = 1;
+    for (int i = 0; i < abs(z); i++) { y *= 10; }
+    return (z < 0) ? x / y : x * y;
+}
+
+bool parse_num(const char *str, long &value, const bool zero_ok, const int exp)
+{
+    int len = strlen(str);
+    int dpt = -1;  // first occurance of decimal point
+    int ept = -1;  // first occurance of exponent symbol
+    for (int i = 0; i < len; i++)
     {
-        dest = value;  // always greater than (or equal to zero, if zero_ok is set)
+        if (dpt == -1 && str[i] == '.')                    { dpt = i; }
+        if (ept == -1 && (str[i] == 'e' || str[i] == 'E')) { ept = i; }
+    }
+
+    long a = atol(str);
+    if (a < 0 || (a == 0 && str[0] != '0' && str[0] != '.')) { return 0; }  // a == 0 could come from a conversion error
+
+    long b = 0;
+    if (dpt != -1)
+    {
+        const char *str_p = str + dpt + 1;
+        b = atol(str_p);
+        if (b < 0 || (b == 0 && str_p[0] != '0')) { return 0; }  // b == 0 could come from a conversion error
+    }
+
+    int c = 0;
+    if (ept != -1)
+    {
+        const char *str_p = str + ept + 1;
+        c = atoi(str_p);
+        if (c == 0 && str_p[0] != '0') { return 0; }  // c == 0 could come from a conversion error
+    }
+
+    if (a > 0 || b > 0 || zero_ok)  // non-negativity already checked above
+    {
+        int dig = (dpt == -1) ? 0 : ((ept == -1) ? len - dpt - 1 : ept - dpt - 1);
+        value = pow10(a, c + exp) + pow10(b, c + exp - dig);  // always greater than (or equal to zero, if zero_ok is set)
         return 1;
     }
     else { return 0; }
 }
 
-bool parse_float(const char *str, float &dest, bool zero_ok)
-{
-    float value = atof(str);
-    if (value > 0.0 || (str[0] == '0' && zero_ok))  // value == 0.0 could come from a conversion error
-    {
-        dest = value;  // always greater than (or equal to zero, if zero_ok is set)
-        return 1;
-    }
-    else { return 0; }
-}
-
-bool parse_int(const char *str, long &dest)    { return parse_int(str,   dest, ZERO_OK); }
-bool parse_float(const char *str, float &dest) { return parse_float(str, dest, ZERO_OK); }
+bool parse_num(const char *str, long &value, bool zero_ok)    { return parse_num(str, value, zero_ok, 0); }
+bool parse_micros(const char *str, long &value, bool zero_ok) { return parse_num(str, value, zero_ok, 6); }
 
 bool split(const char *str, const char sep, int *offset, const int len)
 {
