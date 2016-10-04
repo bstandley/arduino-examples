@@ -5,8 +5,10 @@ basevars_full   = ['*IDN',':TRIG:EDGE', ':TRIG:ARMED', ':TRIG:READY', ':TRIG:REA
 basevars_short  = ['*IDN',':TRIG:EDGE', ':TRIG:ARM',   ':TRIG:READY', ':TRIG:REARM', ':TRIG:COUNT', ':CLOCK:SRC', ':CLOCK:FREQ', ':CLOCK:FREQ:MEAS',    ':CLOCK:FREQ:INT',      ':CLOCK:FREQ:EXT']
 pulsevars_full  = [':DELAY', ':WIDTH', ':PERIOD', ':CYCLES', ':VALID', ':INVERT']
 pulsevars_short = [':DEL',   ':WID',   ':PER',    ':CYC',    ':VAL',   ':INV']
-lanvars_full    = [':LAN:MODE', ':LAN:MAC', ':LAN:IP', ':LAN:IP:STATIC', ':LAN:GATEWAY:STATIC', ':LAN:SUBNET:STATIC']
-lanvars_short   = [':LAN:MODE', ':LAN:MAC', ':LAN:IP', ':LAN:IP:STAT',   ':LAN:GATE:STAT',      ':LAN:SUB:STAT']
+lanvars_full    = [':SYSTEM:COMMUNICATE:LAN:MODE', ':SYSTEM:COMMUNICATE:LAN:MAC', ':SYSTEM:COMMUNICATE:LAN:IP', ':SYSTEM:COMMUNICATE:LAN:IP:STATIC', ':SYSTEM:COMMUNICATE:LAN:GATEWAY:STATIC', ':SYSTEM:COMMUNICATE:LAN:SUBNET:STATIC']
+lanvars_short   = [':LAN:MODE',                    ':LAN:MAC',                    ':LAN:IP',                    ':LAN:IP:STAT',                      ':LAN:GATE:STAT',                         ':LAN:SUB:STAT']
+
+def lj_len(short) : return 18 if short else 40
 
 class Pulsegen :
 
@@ -17,17 +19,17 @@ class Pulsegen :
     def dump_base(self, short=False) :
         for var in (basevars_short if short else basevars_full) :
             msg = var + '?'
-            print(msg.ljust(25) + self.query(msg).strip())
+            print(msg.ljust(lj_len(short)) + self.query(msg).strip())
 
     def dump_pulse(self, chan=1, short=False) :
         for var in (pulsevars_short if short else pulsevars_full) :
             msg = (':PULS' if short else ':PULSE') + str(chan) + var + '?'
-            print(msg.ljust(25) + self.query(msg).strip())
+            print(msg.ljust(lj_len(short)) + self.query(msg).strip())
 
     def dump_lan(self, short=False) :
         for var in (lanvars_short if short else lanvars_full) :
             msg = var + '?'
-            print(msg.ljust(25) + self.query(msg).strip())
+            print(msg.ljust(lj_len(short)) + self.query(msg).strip())
 
     def dump_all(self, short=False) :
         self.dump_base(short=short)
@@ -37,15 +39,15 @@ class Pulsegen :
 
     def set_pulse(self, chan=1, delay=0.04, width=0.005, period=0.02, cycles=3, invert=0) :
         msg = ':PULS%d:DEL %f' % (chan, delay)
-        print(msg.ljust(25) + self.query(msg).strip())
+        print(msg.ljust(lj_len(short)) + self.query(msg).strip())
         msg = ':PULS%d:WID %f' % (chan, width)
-        print(msg.ljust(25) + self.query(msg).strip())
+        print(msg.ljust(lj_len(short)) + self.query(msg).strip())
         msg = ':PULS%d:PER %f' % (chan, period)
-        print(msg.ljust(25) + self.query(msg).strip())
+        print(msg.ljust(lj_len(short)) + self.query(msg).strip())
         msg = ':PULS%d:CYC %d' % (chan, cycles)
-        print(msg.ljust(25) + self.query(msg).strip())
+        print(msg.ljust(lj_len(short)) + self.query(msg).strip())
         msg = ':PULS%d:INV %d' % (chan, invert)
-        print(msg.ljust(25) + self.query(msg).strip())
+        print(msg.ljust(lj_len(short)) + self.query(msg).strip())
 
 class PulsegenSerial(Pulsegen, serial.Serial) :
 

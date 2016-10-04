@@ -33,11 +33,11 @@ struct SCPI
 
 struct SCPI_LAN
 {
-    byte mode;                // :LAN:MODE            OFF, DHCP, or STATic
-    byte mac            [6];  // :LAN:MAC             MAC address (eg. 1A:2B:3C:4D:5E:6F)
-    byte ip_static      [4];  // :LAN:IP:STATic       static ip address (eg. 192.168.0.100)
-    byte gateway_static [4];  // :LAN:GATEway:STATic  static gateway address
-    byte subnet_static  [4];  // :LAN:SUBnet:STATic   static subnet mask
+    byte mode;                // :SYSTem:COMMunicate:LAN:MODE            OFF, DHCP, or STATic
+    byte mac            [6];  // :SYSTem:COMMunicate:LAN:MAC             MAC address (eg. 1A:2B:3C:4D:5E:6F)
+    byte ip_static      [4];  // :SYSTem:COMMunicate:LAN:IP:STATic       static ip address (eg. 192.168.0.100)
+    byte gateway_static [4];  // :SYSTem:COMMunicate:LAN:GATEway:STATic  static gateway address
+    byte subnet_static  [4];  // :SYSTem:COMMunicate:LAN:SUBnet:STATic   static subnet mask
 };
 
 // notes on SCPI settings:
@@ -46,6 +46,7 @@ struct SCPI_LAN
 //   - abbreviations are supported where noted, e.g WIDth matches both WID and WIDTH
 //   - if WIDTH > PERIOD, the pulse is continuous, i.e. always high if not inverted, full sequence will last DELAY + CYCLES*PERIOD
 //   - (DELAY + PERIOD*CYCLES)/FREQ must be < 4e9, otherwise the channel will not be used (VALID = 0)
+//   - prefix :SYSTem:COMMunicate is optional
 //   - LAN settings do not take effect until reboot!
 
 void scpi_default(SCPI &s)

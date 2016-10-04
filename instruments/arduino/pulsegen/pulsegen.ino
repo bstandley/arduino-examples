@@ -294,15 +294,17 @@ void parse_msg(const char *msg)
         send_hex(eeprom_commit, NOEOL);
         send_str(")");
     }
-    else if (equal(msg, "*TRG"))                  { run_sw_trig();              send_str("OK"); }
-    else if (equal(msg, "*SAV"))                  { EEPROM.put(EPA_SCPI, scpi); send_str("OK"); }
-    else if (equal(msg, "*RCL"))                  { EEPROM.get(EPA_SCPI, scpi); update = 1;     }
-    else if (equal(msg, "*RST"))                  { scpi_default(scpi);         update = 1;     }
-    else if (start(msg, ":CLOCK",          rest)) { parse_clock(rest);                          }
-    else if (start(msg, ":TRIG",           rest)) { parse_trig(rest);                           }
-    else if (start(msg, ":PULSE", ":PULS", rest)) { parse_pulse(rest);                          }
-    else if (start(msg, ":LAN",            rest)) { parse_lan(rest);                            }
-    else                                          { send_eps(EPA_REPLY_INVALID_CMD);            }
+    else if (equal(msg, "*TRG"))                                                   { run_sw_trig();              send_str("OK"); }
+    else if (equal(msg, "*SAV"))                                                   { EEPROM.put(EPA_SCPI, scpi); send_str("OK"); }
+    else if (equal(msg, "*RCL"))                                                   { EEPROM.get(EPA_SCPI, scpi); update = 1;     }
+    else if (equal(msg, "*RST"))                                                   { scpi_default(scpi);         update = 1;     }
+    else if (start(msg, ":CLOCK",                                           rest)) { parse_clock(rest);                          }
+    else if (start(msg, ":TRIG",                                            rest)) { parse_trig(rest);                           }
+    else if (start(msg, ":PULSE", ":PULS",                                  rest)) { parse_pulse(rest);                          }
+    else if (start(msg, ":SYSTEM:COMMUNICATE:LAN", ":SYST:COMMUNICATE:LAN", rest)
+          || start(msg, ":SYSTEM:COMM:LAN",        ":SYST:COMM:LAN",        rest)
+          || start(msg, ":LAN",                                             rest)) { parse_lan(rest);                            }
+    else                                                                           { send_eps(EPA_REPLY_INVALID_CMD);            }
 
     if (update)
     {
