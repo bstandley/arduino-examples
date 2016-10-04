@@ -2,6 +2,7 @@
 #define MSGLEN 64  // includes null-terminator
 #define PORT   18
 
+#include <avr/wdt.h>
 #include "eeprom/shared.h"  // includes EEPROM.h
 #include "comm.h"           // includes Ethernet.h, if enabled
 #include "parse.h"
@@ -18,14 +19,15 @@ byte *              conf_pulse_port [NCHAN] = {&PORTB, &PORTE, &PORTD, &PORTC}; 
 const byte          conf_pulse_mask [NCHAN] = {1 << 4, 1 << 6, 1 << 7, 1 << 6};  // board dependent, must match pulse_pin
 
 // SCPI commands:
-//   *IDN?                 model and version
-//   *TRG                  soft trigger, independent of :TRIG:ARMed
-//   *SAV                  save settings to EEPROM (LAN excluded)
-//   *RCL                  recall EEPROM settings (also performed on startup) (LAN excluded)
-//   *RST                  reset to default settings (LAN excluded)
-//   :CLOCK:FREQ:INTernal  ideal internal frequency in Hz
-//   :CLOCK:FREQ:MEASure   measured frequency in Hz of currently-configured clock
-//   :LAN:IP               current ip address
+//   *IDN?                       model and version
+//   *TRG                        soft trigger, independent of :TRIG:ARMed
+//   *SAV                        save settings to EEPROM (LAN excluded)
+//   *RCL                        recall EEPROM settings (also performed on startup) (LAN excluded)
+//   *RST                        reset to default settings (LAN excluded)
+//   :CLOCK:FREQ:INTernal        ideal internal frequency in Hz
+//   :CLOCK:FREQ:MEASure         measured frequency in Hz of currently-configured clock
+//   :SYSTem:REBoot              reboot the device
+//   :SYSTem:COMMunicate:LAN:IP  current ip address (prefix :SYSTem:COMMunicate is optional)
 
 // persistent SCPI settings:
 SCPI scpi;
@@ -57,6 +59,8 @@ unsigned int countdown_dhcp;
 
 void setup()
 {
+    wdt_disable();  // just in case the bootloader does not do this automatically
+
     EEPROM.get(EPA_SCPI, scpi);
 
     pinMode(conf_clock_pin, INPUT);
@@ -217,6 +221,12 @@ long measure_freq()
     return (1000 * k) / conf_measure_ms;
 }
 
+void reboot()
+{
+    wdt_enable(WDTO_1S);
+    while(1);
+}
+
 // runtime update functions:
 
 bool update_clock()
@@ -304,6 +314,8 @@ void parse_msg(const char *msg)
     else if (start(msg, ":PULSE2:", ":PULS2:",                                rest)) { parse_pulse(1, rest);                       }
     else if (start(msg, ":PULSE3:", ":PULS3:",                                rest)) { parse_pulse(2, rest);                       }
     else if (start(msg, ":PULSE4:", ":PULS4:",                                rest)) { parse_pulse(3, rest);                       }
+    else if (equal(msg, ":SYSTEM:REBOOT",           ":SYST:REBOOT")
+          || equal(msg, ":SYSTEM:REB",              ":SYST:REB"))                    { send_eps(EPA_REPLY_REBOOTING); reboot();    }
     else if (start(msg, ":SYSTEM:COMMUNICATE:LAN:", ":SYST:COMMUNICATE:LAN:", rest)
           || start(msg, ":SYSTEM:COMM:LAN:",        ":SYST:COMM:LAN:",        rest)
           || start(msg, ":LAN:",                                              rest)) { parse_lan(rest);                            }
@@ -524,6 +536,6 @@ void parse_lan(const char *rest)
     if (update)
     {
         EEPROM.put(EPA_SCPI_LAN, scpi_lan);  // save immediately
-        send_eps(EPA_REPLY_REBOOT);
+        send_eps(EPA_REPLY_REBOOT_REQ);
     }
 }

@@ -12,9 +12,11 @@ def lj_len(short) : return 18 if short else 40
 
 class Pulsegen :
 
+    def trig(self)   : return self.query('*TRG')
     def save(self)   : return self.query('*SAV')
     def recall(self) : return self.query('*RCL')
     def reset(self)  : return self.query('*RST')
+    def reboot(self) : return self.query(':SYSTEM:REBOOT')
 
     def dump_base(self, short=False) :
         for var in (basevars_short if short else basevars_full) :
@@ -39,15 +41,15 @@ class Pulsegen :
 
     def set_pulse(self, chan=1, delay=0.04, width=0.005, period=0.02, cycles=3, invert=0) :
         msg = ':PULS%d:DEL %f' % (chan, delay)
-        print(msg.ljust(lj_len(short)) + self.query(msg).strip())
+        print(msg.ljust(20) + self.query(msg).strip())
         msg = ':PULS%d:WID %f' % (chan, width)
-        print(msg.ljust(lj_len(short)) + self.query(msg).strip())
+        print(msg.ljust(20) + self.query(msg).strip())
         msg = ':PULS%d:PER %f' % (chan, period)
-        print(msg.ljust(lj_len(short)) + self.query(msg).strip())
+        print(msg.ljust(20) + self.query(msg).strip())
         msg = ':PULS%d:CYC %d' % (chan, cycles)
-        print(msg.ljust(lj_len(short)) + self.query(msg).strip())
+        print(msg.ljust(20) + self.query(msg).strip())
         msg = ':PULS%d:INV %d' % (chan, invert)
-        print(msg.ljust(lj_len(short)) + self.query(msg).strip())
+        print(msg.ljust(20) + self.query(msg).strip())
 
 class PulsegenSerial(Pulsegen, serial.Serial) :
 

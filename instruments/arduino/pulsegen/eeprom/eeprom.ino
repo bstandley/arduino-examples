@@ -6,7 +6,8 @@ const char          conf_reply_check       [ESLEN] = "WARNING: CHECK CHANNEL TIM
 const char          conf_reply_readonly    [ESLEN] = "ERROR: READ-ONLY SETTING";
 const char          conf_reply_invalid_cmd [ESLEN] = "ERROR: INVALID COMMAND OR QUERY";
 const char          conf_reply_invalid_arg [ESLEN] = "ERROR: INVALID ARGUMENT";
-const char          conf_reply_reboot      [ESLEN] = "INFO: REBOOT TO APPLY LAN SETTINGS";
+const char          conf_reply_reboot_req  [ESLEN] = "INFO: REBOOT TO APPLY LAN SETTINGS";
+const char          conf_reply_rebooting   [ESLEN] = "INFO: REBOOTING . . .";
 
 void setup()
 {
@@ -25,7 +26,8 @@ void setup()
     EEPROM.put(EPA_REPLY_READONLY,    conf_reply_readonly);
     EEPROM.put(EPA_REPLY_INVALID_CMD, conf_reply_invalid_cmd);
     EEPROM.put(EPA_REPLY_INVALID_ARG, conf_reply_invalid_arg);
-    EEPROM.put(EPA_REPLY_REBOOT,      conf_reply_reboot);
+    EEPROM.put(EPA_REPLY_REBOOT_REQ,  conf_reply_reboot_req);
+    EEPROM.put(EPA_REPLY_REBOOTING,   conf_reply_rebooting);
 
     Serial.begin(9600);
 }
@@ -65,7 +67,8 @@ void loop()
     check_eps(EPA_REPLY_READONLY,    "EPA_REPLY_READONLY");
     check_eps(EPA_REPLY_INVALID_CMD, "EPA_REPLY_INVALID_CMD");
     check_eps(EPA_REPLY_INVALID_ARG, "EPA_REPLY_INVALID_ARG");
-    check_eps(EPA_REPLY_REBOOT,      "EPA_REPLY_REBOOT");
+    check_eps(EPA_REPLY_REBOOT_REQ,  "EPA_REPLY_REBOOT_REQ");
+    check_eps(EPA_REPLY_REBOOTING,   "EPA_REPLY_REBOOTING");
 
     delay(4000);
 }
