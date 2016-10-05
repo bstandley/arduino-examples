@@ -124,25 +124,31 @@ bool parse_ip(const char *str, byte *dest)
     return 1;
 }
 
-bool equal(const char *str, const char *cmp)
+bool start_match(const char *str, char *rest, int cmp_len)
 {
-    return strcasecmp(str, cmp) == 0;
-}
-
-bool start(const char *str, const char *sub, char *rest)
-{
-    int sub_len = strlen(sub);
-    bool rv = (strncasecmp(sub, str, sub_len) == 0);
-
     if (rest != NULL)
     {
-        if (rv && strlen(str) > sub_len) { strcpy(rest, str + sub_len); }
-        else                             { rest[0] = 0; }
-    }
+        if (strlen(str) > cmp_len) { strcpy(rest, str + cmp_len); }
+        else                       { rest[0] = 0; }
 
-    return rv;
+        return 1;  // start matches and remainder is allowed
+    }
+    else if (strlen(str) == cmp_len) { return 1; }  // exact match
+    else                             { return 0; }
 }
 
-bool equal(const char *str, const char *cmp1, const char *cmp2)             { return equal(str, cmp1)       || equal(str, cmp2);       }
-bool start(const char *str, const char *sub1, const char *sub2, char *rest) { return start(str, sub1, rest) || start(str, sub2, rest); }
+bool start(const char *str, const char *pre, const char *opt, const char *suf, char *rest)
+{
+    int pre_len = strlen(pre);
+    int opt_len = strlen(opt);
+    int suf_len = strlen(suf);
 
+    if      (strncasecmp(str, pre, pre_len) == 0 && strncasecmp(str + pre_len, opt, opt_len) == 0 && strncasecmp(str + pre_len + opt_len, suf, suf_len) == 0) { return start_match(str, rest, pre_len + opt_len + suf_len); }
+    else if (strncasecmp(str, pre, pre_len) == 0 && strncasecmp(str + pre_len, suf, suf_len) == 0)                                                            { return start_match(str, rest, pre_len + suf_len);           }
+    else                                                                                                                                                      { return 0;                                                   }
+}
+
+bool start(const char *str, const char *cmp, char *rest)                       { return start(str, cmp, "",  "",  rest); }
+bool equal(const char *str, const char *cmp)                                   { return start(str, cmp, "",  "",  NULL); }
+bool equal(const char *str, const char *pre, const char *opt)                  { return start(str, pre, opt, "",  NULL); }
+bool equal(const char *str, const char *pre, const char *opt, const char *suf) { return start(str, pre, opt, suf, NULL); }
