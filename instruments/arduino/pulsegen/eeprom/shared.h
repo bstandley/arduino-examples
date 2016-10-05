@@ -47,7 +47,6 @@ struct SCPI_LAN
 //   - abbreviations are supported where noted, e.g WIDth matches both WID and WIDTH
 //   - if WIDTH > PERIOD, the pulse is continuous, i.e. always high if not inverted, full sequence will last DELAY + CYCLES*PERIOD
 //   - (DELAY + PERIOD*CYCLES)/FREQ must be < 4e9, otherwise the channel will not be used (VALID = 0)
-//   - prefix :SYSTem:COMMunicate is optional
 //   - LAN settings do not take effect until reboot!
 
 void scpi_default(SCPI &s)

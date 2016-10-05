@@ -6,9 +6,9 @@ basevars_short  = ['*IDN',':TRIG:EDGE', ':TRIG:ARM',   ':TRIG:READY', ':TRIG:REA
 pulsevars_full  = [':DELAY', ':WIDTH', ':PERIOD', ':CYCLES', ':VALID', ':INVERT']
 pulsevars_short = [':DEL',   ':WID',   ':PER',    ':CYC',    ':VAL',   ':INV']
 lanvars_full    = [':SYSTEM:COMMUNICATE:LAN:MODE', ':SYSTEM:COMMUNICATE:LAN:MAC', ':SYSTEM:COMMUNICATE:LAN:IP', ':SYSTEM:COMMUNICATE:LAN:IP:STATIC', ':SYSTEM:COMMUNICATE:LAN:GATEWAY:STATIC', ':SYSTEM:COMMUNICATE:LAN:SUBNET:STATIC']
-lanvars_short   = [':LAN:MODE',                    ':LAN:MAC',                    ':LAN:IP',                    ':LAN:IP:STAT',                      ':LAN:GATE:STAT',                         ':LAN:SUB:STAT']
+lanvars_short   = [':SYST:COMM:LAN:MODE',          ':SYST:COMM:LAN:MAC',          ':SYST:COMM:LAN:IP',          ':SYST:COMM:LAN:IP:STAT',            ':SYST:COMM:LAN:GATE:STAT',               ':SYST:COMM:LAN:SUB:STAT']
 
-def lj_len(short) : return 18 if short else 40
+def lj_len(short) : return 26 if short else 40
 
 class Pulsegen :
 
