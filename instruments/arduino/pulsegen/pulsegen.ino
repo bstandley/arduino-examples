@@ -33,13 +33,13 @@ const byte          conf_pulse_mask [NCHAN] = {1 << 4, 1 << 6, 1 << 7, 1 << 6}; 
 SCPI scpi;
 
 // runtime SCPI variables (read-only except where noted):
-long          scpi_clock_freq;          // :CLOCK:FREQ      ideal frequency in Hz of currently-configure clock
-volatile long scpi_trig_count;          // :TRIG:COUNT      hardware triggers detected since reboot
-volatile bool scpi_trig_armed;          // :TRIG:ARMed      armed (read/write)
-volatile bool scpi_trig_ready;          // :TRIG:READY      ready (armed plus at least one valid channel)
-bool          scpi_pulse_valid[NCHAN];  // :PULSe<n>:VALid  output channel has valid/usable pulse sequence
+long          scpi_clock_freq;          // :CLOCK:FREQuency              ideal frequency in Hz of currently-configure clock
+volatile long scpi_trig_count;          // :TRIGger:COUNt                hardware triggers detected since reboot
+volatile bool scpi_trig_armed;          // :TRIGger:ARMed                armed (read/write)
+volatile bool scpi_trig_ready;          // :TRIGger:READY                ready (armed plus at least one valid channel)
+bool          scpi_pulse_valid[NCHAN];  // :PULSe<n>:VALid               output channel has valid/usable pulse sequence
 #ifdef LAN
-byte          scpi_lan_mode;            // :LAN:MODE        actual mode (writes go to scpi_lan.mode)
+byte          scpi_lan_mode;            // :SYSTem:COMMunicate:LAN:MODE  actual mode (writes go to scpi_lan.mode)
 #endif
 
 unsigned long          k_delay  [NCHAN];
@@ -280,7 +280,7 @@ void parse_msg(const char *msg)
     else if (equal(msg, "*RCL"))                      { EEPROM.get(EPA_SCPI, scpi); update = 1;     }
     else if (equal(msg, "*RST"))                      { scpi_default(scpi);         update = 1;     }
     else if (start(msg, ":CLOCK:",             rest)) { parse_clock(rest);                          }
-    else if (start(msg, ":TRIG:",              rest)) { parse_trig(rest);                           }
+    else if (start(msg, ":TRIGGER:", ":TRIG:", rest)) { parse_trig(rest);                           }
     else if (start(msg, ":PULSE1:", ":PULS1:", rest)) { parse_pulse(0, rest);                       }
     else if (start(msg, ":PULSE2:", ":PULS2:", rest)) { parse_pulse(1, rest);                       }
     else if (start(msg, ":PULSE3:", ":PULS3:", rest)) { parse_pulse(2, rest);                       }
@@ -306,18 +306,18 @@ void parse_clock(const char *msg)
     char rest[MSGLEN];
     bool update = 0;
 
-    if      (equal(msg, "SRC?"))                 { send_str(scpi.clock_src == INTERNAL ? "INTERNAL" : "EXTERNAL"); }
+    if      (equal(msg, "SRC?"))                      { send_str(scpi.clock_src == INTERNAL ? "INTERNAL" : "EXTERNAL"); }
     else if (start(msg, "SRC ", rest))
     {
-        if      (equal(rest, "INTERNAL", "INT")) { scpi.clock_src = INTERNAL; update = 1;                          }
-        else if (equal(rest, "EXTERNAL", "EXT")) { scpi.clock_src = EXTERNAL; update = 1;                          }
-        else                                     { send_eps(EPA_REPLY_INVALID_ARG);                                }
+        if      (equal(rest, "INTERNAL", "INT"))      { scpi.clock_src = INTERNAL; update = 1;                          }
+        else if (equal(rest, "EXTERNAL", "EXT"))      { scpi.clock_src = EXTERNAL; update = 1;                          }
+        else                                          { send_eps(EPA_REPLY_INVALID_ARG);                                }
 
     }
-    else if (equal(msg, "FREQ?"))                { send_int(scpi_clock_freq);                                      }
-    else if (start(msg, "FREQ ", NULL))          { send_eps(EPA_REPLY_READONLY);                                   }
-    else if (start(msg, "FREQ:", rest))          { parse_clock_freq(rest, update);                                 }
-    else                                         { send_eps(EPA_REPLY_INVALID_CMD);                                }
+    else if (equal(msg, "FREQUENCY?", "FREQ?"))       { send_int(scpi_clock_freq);                                      }
+    else if (start(msg, "FREQUENCY ", "FREQ ", NULL)) { send_eps(EPA_REPLY_READONLY);                                   }
+    else if (start(msg, "FREQUENCY:", "FREQ:", rest)) { parse_clock_freq(rest, update);                                 }
+    else                                              { send_eps(EPA_REPLY_INVALID_CMD);                                }
 
     if (update)
     {
@@ -367,33 +367,33 @@ void parse_trig(const char *msg)
     char rest[MSGLEN];
     bool update = 0;
 
-    if      (equal(msg, "EDGE?"))                { send_str(scpi.trig_edge == RISING ? "RISING" : "FALLING"); }
+    if      (equal(msg, "EDGE?"))                 { send_str(scpi.trig_edge == RISING ? "RISING" : "FALLING"); }
     else if (start(msg, "EDGE ", rest))
     {
-        if      (equal(rest, "RISING",  "RIS"))  { scpi.trig_edge = RISING;  update = 1;                      }
-        else if (equal(rest, "FALLING", "FALL")) { scpi.trig_edge = FALLING; update = 1;                      }
-        else                                     { send_eps(EPA_REPLY_INVALID_ARG);                           }
+        if      (equal(rest, "RISING",  "RIS"))   { scpi.trig_edge = RISING;  update = 1;                      }
+        else if (equal(rest, "FALLING", "FALL"))  { scpi.trig_edge = FALLING; update = 1;                      }
+        else                                      { send_eps(EPA_REPLY_INVALID_ARG);                           }
     }
-    else if (equal(msg, "ARMED?", "ARM?"))       { send_hex(scpi_trig_armed);                                 }
+    else if (equal(msg, "ARMED?", "ARM?"))        { send_hex(scpi_trig_armed);                                 }
     else if (start(msg, "ARMED ", "ARM ", rest))
     {
-        if      (equal(rest, "1"))               { scpi_trig_armed = 1; update = 1;                           }
-        else if (equal(rest, "0"))               { scpi_trig_armed = 0; update = 1;                           }
-        else                                     { send_eps(EPA_REPLY_INVALID_ARG);                           }
+        if      (equal(rest, "1"))                { scpi_trig_armed = 1; update = 1;                           }
+        else if (equal(rest, "0"))                { scpi_trig_armed = 0; update = 1;                           }
+        else                                      { send_eps(EPA_REPLY_INVALID_ARG);                           }
 
     }
-    else if (equal(msg, "READY?"))               { send_hex(scpi_trig_ready);                                 }
-    else if (start(msg, "READY ", NULL))         { send_eps(EPA_REPLY_READONLY);                              }
-    else if (equal(msg, "REARM?"))               { send_hex(scpi.trig_rearm);                                 }
+    else if (equal(msg, "READY?"))                { send_hex(scpi_trig_ready);                                 }
+    else if (start(msg, "READY ", NULL))          { send_eps(EPA_REPLY_READONLY);                              }
+    else if (equal(msg, "REARM?"))                { send_hex(scpi.trig_rearm);                                 }
     else if (start(msg, "REARM ", rest))
     {
-        if      (equal(rest, "1"))               { scpi.trig_rearm = 1; send_str("OK");                       }
-        else if (equal(rest, "0"))               { scpi.trig_rearm = 0; send_str("OK");                       }
-        else                                     { send_eps(EPA_REPLY_INVALID_ARG);                           }
+        if      (equal(rest, "1"))                { scpi.trig_rearm = 1; send_str("OK");                       }
+        else if (equal(rest, "0"))                { scpi.trig_rearm = 0; send_str("OK");                       }
+        else                                      { send_eps(EPA_REPLY_INVALID_ARG);                           }
     }
-    else if (equal(msg, "COUNT?"))               { send_int(scpi_trig_count);                                 }
-    else if (start(msg, "COUNT ", NULL))         { send_eps(EPA_REPLY_READONLY);                              }
-    else                                         { send_eps(EPA_REPLY_INVALID_CMD);                           }
+    else if (equal(msg, "COUNT?", "COUN?"))       { send_int(scpi_trig_count);                                 }
+    else if (start(msg, "COUNT ", "COUN ", NULL)) { send_eps(EPA_REPLY_READONLY);                              }
+    else                                          { send_eps(EPA_REPLY_INVALID_CMD);                           }
 
     if (update)
     {

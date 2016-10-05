@@ -21,15 +21,15 @@
 
 struct SCPI
 {
-    byte clock_src;             // :CLOCK:SRC            INTernal or EXTernal
-    long clock_freq_ext;        // :CLOCK:FREQ:EXTernal  ideal external frequency in Hz -- max 5e6
-    byte trig_edge;             // :TRIG:EDGE            RISing or FALLing
-    bool trig_rearm;            // :TRIG:REARM           rearm after pulse sequence and on reboot
-    long pulse_delay  [NCHAN];  // :PULSe<n>:DELay       delay to first pulse is s (stored in us)
-    long pulse_width  [NCHAN];  // :PULSe<n>:WIDth       pulse width in s (stored in us)
-    long pulse_period [NCHAN];  // :PULSe<n>:PERiod      pulse period in s (stored in us)
-    long pulse_cycles [NCHAN];  // :PULSe<n>:CYCles      number of pulses
-    bool pulse_invert [NCHAN];  // :PULSe<n>:INVert      0 = non-inverting, 1 = inverting
+    byte clock_src;             // :CLOCK:SRC                 INTernal or EXTernal
+    long clock_freq_ext;        // :CLOCK:FREQuency:EXTernal  ideal external frequency in Hz -- max 5e6
+    byte trig_edge;             // :TRIGger:EDGE              RISing or FALLing
+    bool trig_rearm;            // :TRIGger:REARM             rearm after pulse sequence and on reboot
+    long pulse_delay  [NCHAN];  // :PULSe<n>:DELay            delay to first pulse is s (stored in us)
+    long pulse_width  [NCHAN];  // :PULSe<n>:WIDth            pulse width in s (stored in us)
+    long pulse_period [NCHAN];  // :PULSe<n>:PERiod           pulse period in s (stored in us)
+    long pulse_cycles [NCHAN];  // :PULSe<n>:CYCles           number of pulses
+    bool pulse_invert [NCHAN];  // :PULSe<n>:INVert           0 = non-inverting, 1 = inverting
 };
 
 struct SCPI_LAN
