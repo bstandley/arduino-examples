@@ -213,7 +213,8 @@ bool update_clock()
 
     TCCR1A = 0x0;                                  // COM1A1=0 COM1A0=0 COM1B1=0 COM1B0=0 FOC1A=0 FOC1B=0 WMG11=0 WGM10=0
     TCCR1B = (scpi.clock_src == INTERNAL) ? 0x2 :  // ICNC1=0  ICES1=0  n/a=0    WGM13=0  WGM12=0 CS12=0  CS11=1  CS10=0  (internal, /8)
-                                            0x7;   // ICNC1=0  ICES1=0  n/a=0    WGM13=0  WGM12=0 CS12=1  CS11=1  CS10=1  (external rising)
+             (scpi.clock_edge == RISING)  ? 0x7 :  // ICNC1=0  ICES1=0  n/a=0    WGM13=0  WGM12=0 CS12=1  CS11=1  CS10=1  (external, rising)
+                                            0x6;   // ICNC1=0  ICES1=0  n/a=0    WGM13=0  WGM12=0 CS12=1  CS11=1  CS10=0  (external, falling)
 }
 
 void update_trig_edge()
@@ -314,6 +315,7 @@ void parse_clock(const char *msg)
         else                                         { send_eps(EPA_REPLY_INVALID_ARG);                                }
 
     }
+    else if (start(msg, "EDGE", rest))               { parse_edge(rest, scpi.clock_edge, update);                      }
     else if (equal(msg, "FREQ", "uency", "?"))       { send_int(scpi_clock_freq);                                      }
     else if (start(msg, "FREQ", "uency", " ", rest)) { send_eps(EPA_REPLY_READONLY);                                   }
     else if (start(msg, "FREQ", "uency", ":", rest)) { parse_clock_freq(rest, update);                                 }
@@ -329,6 +331,20 @@ void parse_clock(const char *msg)
         if (ok) { send_str("OK");            }
         else    { send_eps(EPA_REPLY_CHECK); }
     }
+}
+
+void parse_edge(const char *msg, byte &edge, bool &update)
+{
+    char rest[MSGLEN];
+
+    if      (equal(msg, "?"))                { send_str(edge == RISING ? "RISING" : "FALLING"); }
+    else if (start(msg, " ", rest))
+    {
+        if      (equal(rest, "RIS", "ing"))  { edge = RISING;  update = 1;                      }
+        else if (equal(rest, "FALL", "ing")) { edge = FALLING; update = 1;                      }
+        else                                 { send_eps(EPA_REPLY_INVALID_ARG);                 }
+    }
+    else                                     { send_eps(EPA_REPLY_INVALID_CMD);                 }
 }
 
 void parse_clock_freq(const char *msg, bool &update)
@@ -367,33 +383,27 @@ void parse_trig(const char *msg)
     char rest[MSGLEN];
     bool update = 0;
 
-    if      (equal(msg, "EDGE?"))                { send_str(scpi.trig_edge == RISING ? "RISING" : "FALLING"); }
-    else if (start(msg, "EDGE ", rest))
-    {
-        if      (equal(rest, "RIS", "ing"))      { scpi.trig_edge = RISING;  update = 1;                      }
-        else if (equal(rest, "FALL", "ing"))     { scpi.trig_edge = FALLING; update = 1;                      }
-        else                                     { send_eps(EPA_REPLY_INVALID_ARG);                           }
-    }
-    else if (equal(msg, "ARM", "ed", "?"))       { send_hex(scpi_trig_armed);                                 }
+    if      (start(msg, "EDGE", rest))           { parse_edge(rest, scpi.trig_edge, update); }
+    else if (equal(msg, "ARM", "ed", "?"))       { send_hex(scpi_trig_armed);                }
     else if (start(msg, "ARM", "ed", " ", rest))
     {
-        if      (equal(rest, "1"))               { scpi_trig_armed = 1; update = 1;                           }
-        else if (equal(rest, "0"))               { scpi_trig_armed = 0; update = 1;                           }
-        else                                     { send_eps(EPA_REPLY_INVALID_ARG);                           }
+        if      (equal(rest, "1"))               { scpi_trig_armed = 1; update = 1;          }
+        else if (equal(rest, "0"))               { scpi_trig_armed = 0; update = 1;          }
+        else                                     { send_eps(EPA_REPLY_INVALID_ARG);          }
 
     }
-    else if (equal(msg, "READY?"))               { send_hex(scpi_trig_ready);                                 }
-    else if (start(msg, "READY ", rest))         { send_eps(EPA_REPLY_READONLY);                              }
-    else if (equal(msg, "REARM?"))               { send_hex(scpi.trig_rearm);                                 }
+    else if (equal(msg, "READY?"))               { send_hex(scpi_trig_ready);                }
+    else if (start(msg, "READY ", rest))         { send_eps(EPA_REPLY_READONLY);             }
+    else if (equal(msg, "REARM?"))               { send_hex(scpi.trig_rearm);                }
     else if (start(msg, "REARM ", rest))
     {
-        if      (equal(rest, "1"))               { scpi.trig_rearm = 1; send_str("OK");                       }
-        else if (equal(rest, "0"))               { scpi.trig_rearm = 0; send_str("OK");                       }
-        else                                     { send_eps(EPA_REPLY_INVALID_ARG);                           }
+        if      (equal(rest, "1"))               { scpi.trig_rearm = 1; send_str("OK");      }
+        else if (equal(rest, "0"))               { scpi.trig_rearm = 0; send_str("OK");      }
+        else                                     { send_eps(EPA_REPLY_INVALID_ARG);          }
     }
-    else if (equal(msg, "COUN", "t", "?"))       { send_int(scpi_trig_count);                                 }
-    else if (start(msg, "COUN", "t", " ", rest)) { send_eps(EPA_REPLY_READONLY);                              }
-    else                                         { send_eps(EPA_REPLY_INVALID_CMD);                           }
+    else if (equal(msg, "COUN", "t", "?"))       { send_int(scpi_trig_count);                }
+    else if (start(msg, "COUN", "t", " ", rest)) { send_eps(EPA_REPLY_READONLY);             }
+    else                                         { send_eps(EPA_REPLY_INVALID_CMD);          }
 
     if (update)
     {

@@ -22,6 +22,7 @@
 struct SCPI
 {
     byte clock_src;             // :CLOCK:SRC                 INTernal or EXTernal
+    byte clock_edge;            // :CLOCK:EDGE                RISing or FALLing
     long clock_freq_ext;        // :CLOCK:FREQuency:EXTernal  ideal external frequency in Hz -- max 5e6
     byte trig_edge;             // :TRIGger:EDGE              RISing or FALLing
     bool trig_rearm;            // :TRIGger:REARM             rearm after pulse sequence and on reboot
@@ -52,6 +53,7 @@ struct SCPI_LAN
 void scpi_default(SCPI &s)
 {
     s.clock_src      = INTERNAL;
+    s.clock_edge     = RISING;
     s.clock_freq_ext = 1000000;
     s.trig_edge      = RISING;
     s.trig_rearm     = 1;
