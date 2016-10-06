@@ -101,9 +101,9 @@ void send_lan(const byte mode, const bool eol)
 
 void send_mac(const byte *addr, const bool eol)
 {
-    for (int i = 0; i < 5; i++)
+    for (int j = 0; j < 5; j++)
     {
-        send_hex(addr[i], NOEOL);
+        send_hex(addr[j], NOEOL);
         send_str(":",     NOEOL);
     }
     send_hex(addr[5], eol);
@@ -111,10 +111,10 @@ void send_mac(const byte *addr, const bool eol)
 
 void send_ip(const uint32_t addr, const bool eol)
 {
-    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
     {
-        send_int((addr >> (i*8)) & 0xFF, NOEOL);
-        send_str(".",     NOEOL);
+        send_int((addr >> (j*8)) & 0xFF, NOEOL);
+        send_str(".",                    NOEOL);
     }
     send_int((addr >> 24) & 0xFF, eol);
 }

@@ -302,11 +302,11 @@ void parse_msg(const char *msg)
     else if (equal(msg, "*RST"))                    { scpi_default(scpi);         update = 1;     }
     else if (start(msg, ":CLOCK:",           rest)) { parse_clock(rest);                          }
     else if (start(msg, ":TRIG", "ger", ":", rest)) { parse_trig(rest);                           }
-    else if (start(msg, ":PULS", "E",  "1:", rest)) { parse_pulse(0, rest);                       }
-    else if (start(msg, ":PULS", "E",  "2:", rest)) { parse_pulse(1, rest);                       }
-    else if (start(msg, ":PULS", "E",  "3:", rest)) { parse_pulse(2, rest);                       }
-    else if (start(msg, ":PULS", "E",  "4:", rest)) { parse_pulse(3, rest);                       }
-    else if (start(msg, ":SYST", "EM",  ":", rest)) { parse_system(rest);                         }
+    else if (start(msg, ":PULS", "e",  "1:", rest)) { parse_pulse(0, rest);                       }
+    else if (start(msg, ":PULS", "e",  "2:", rest)) { parse_pulse(1, rest);                       }
+    else if (start(msg, ":PULS", "e",  "3:", rest)) { parse_pulse(2, rest);                       }
+    else if (start(msg, ":PULS", "e",  "4:", rest)) { parse_pulse(3, rest);                       }
+    else if (start(msg, ":SYST", "em",  ":", rest)) { parse_system(rest);                         }
     else                                            { send_eps(EPA_REPLY_INVALID_CMD);            }
 
     if (update)
@@ -439,13 +439,13 @@ void parse_pulse(const int n, const char *msg)
     bool update = 0;
 
     if      (equal(msg, "DEL", "ay", "?"))                      { send_micros(scpi.pulse_delay[n]);     }
-    else if (start(msg, "DEL", "ay", " ",  rest))
+    else if (start(msg, "DEL", "ay", " ", rest))
     {
         if (parse_micros(rest, scpi.pulse_delay[n], ZERO_OK))   { update = 1;                           }
         else                                                    { send_eps(EPA_REPLY_INVALID_ARG);      }
     }
     else if (equal(msg, "WID", "th", "?"))                      { send_micros(scpi.pulse_width[n]);     }
-    else if (start(msg, "WID", "th", " ",  rest))
+    else if (start(msg, "WID", "th", " ", rest))
     {
         if (parse_micros(rest, scpi.pulse_width[n], ZERO_NOK))  { update = 1;                           }
         else                                                    { send_eps(EPA_REPLY_INVALID_ARG);      }
@@ -470,7 +470,7 @@ void parse_pulse(const int n, const char *msg)
         else                                                    { send_eps(EPA_REPLY_INVALID_ARG);      }
     }
     else if (equal(msg, "VAL", "id", "?"))                      { send_hex(scpi_pulse_valid[n]);        }
-    else if (start(msg, "VAL", "id", " ",  rest))               { send_eps(EPA_REPLY_READONLY);         }
+    else if (start(msg, "VAL", "id", " ", rest))                { send_eps(EPA_REPLY_READONLY);         }
     else                                                        { send_eps(EPA_REPLY_INVALID_CMD);      }
 
     if (update)
