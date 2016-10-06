@@ -89,10 +89,11 @@ void setup()
     scpi_lan_mode = scpi_lan.mode;
     if (scpi_lan_mode == LAN_DHCP)
     {
-        Ethernet.begin(scpi_lan.mac);
-        countdown_dhcp = conf_dhcp_cycles;
+        if (Ethernet.begin(scpi_lan.mac)) { countdown_dhcp = conf_dhcp_cycles; }
+        else                              { scpi_lan_mode = LAN_STATIC;        }  // fallback
     }
-    else if (scpi_lan_mode == LAN_STATIC)
+
+    if (scpi_lan_mode == LAN_STATIC)
     {
         const uint32_t dns = 0;  // DNS is not used
         Ethernet.begin(scpi_lan.mac, scpi_lan.ip_static, dns, scpi_lan.gateway_static, scpi_lan.subnet_static);
