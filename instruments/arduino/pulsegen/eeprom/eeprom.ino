@@ -90,22 +90,13 @@ void check_eps(const int epa, const char *name)
 void scpi_lan_initial(SCPI_LAN &s)
 {
     s.mode = LAN_DHCP;
-    s.mac[0]            = 0x6;
-    s.mac[1]            = 0x5;
-    s.mac[2]            = 0x4;
-    s.mac[3]            = 0x3;
-    s.mac[4]            = 0x2;
-    s.mac[5]            = 0x1;
-    s.ip_static[0]      = 192;
-    s.ip_static[1]      = 168;
-    s.ip_static[2]      = 0;
-    s.ip_static[3]      = 100;
-    s.gateway_static[0] = 192;
-    s.gateway_static[1] = 168;
-    s.gateway_static[2] = 0;
-    s.gateway_static[3] = 1;
-    s.subnet_static[0]  = 255;
-    s.subnet_static[1]  = 255;
-    s.subnet_static[2]  = 255;
-    s.subnet_static[3]  = 0;
+    s.mac[0] = 0x6;
+    s.mac[1] = 0x5;
+    s.mac[2] = 0x4;
+    s.mac[3] = 0x3;
+    s.mac[4] = 0x2;
+    s.mac[5] = 0x1;
+    s.ip_static      = 0x6400A8C0;  // 192.168.0.100
+    s.gateway_static = 0x0100A8C0;  // 192.168.0.1
+    s.subnet_static  = 0x00FFFFFF;  // 255.255.255.0
 }

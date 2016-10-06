@@ -92,49 +92,48 @@ bool parse_mac(const char *str, byte *dest)
     byte addr[6];
     for (int j = 0; j < 6; j++)
     {
-        byte value;
+        byte tmp;
         const char *str_p = str + offset[j];
         if      (str_p[0] == ':' || str_p[0] == 0) { return 0; }  // zero digits . . .
-        else if (str_p[1] == ':' || str_p[1] == 0) { if (!unhex('0',      str_p[0], value)) { return 0; } }
-        else if (str_p[2] == ':' || str_p[2] == 0) { if (!unhex(str_p[0], str_p[1], value)) { return 0; } }
+        else if (str_p[1] == ':' || str_p[1] == 0) { if (!unhex('0',      str_p[0], tmp)) { return 0; } }
+        else if (str_p[2] == ':' || str_p[2] == 0) { if (!unhex(str_p[0], str_p[1], tmp)) { return 0; } }
         else { return 0; }  // too many digits . . .
 
-        addr[j] = value;
+        addr[j] = tmp;
     }
 
     for (int j = 0; j < 6; j++) { dest[j] = addr[j]; }
     return 1;
 }
 
-bool parse_ip(const char *str, byte *dest)
+bool parse_ip(const char *str, uint32_t &value)
 {
     int offset[4];
     if (!split(str, '.', offset, 4)) { return 0; }
 
-    byte addr[4];
+    uint32_t addr = 0;
     for (int j = 0; j < 4; j++)
     {
         const char *str_p = str + offset[j];
-        long value = atoi(str_p);
-        if (value < 0 || value > 255 || (value == 0 && str_p[0] != '0')) { return 0; }
-        addr[j] = value;
+        long tmp = atoi(str_p);
+        if (tmp < 0 || tmp > 255 || (tmp == 0 && str_p[0] != '0')) { return 0; }
+        addr |= tmp << (j*8);  // & 0xFF not necessary due to above line
     }
 
-    for (int j = 0; j < 4; j++) { dest[j] = addr[j]; }
+    value = addr;
     return 1;
 }
 
-bool start_match(const char *str, char *rest, int cmp_len)
+bool start_match(const char *str_p, char *rest)
 {
     if (rest != NULL)
     {
-        if (strlen(str) > cmp_len) { strcpy(rest, str + cmp_len); }
-        else                       { rest[0] = 0; }
+        if (strlen(str_p) > 0) { strcpy(rest, str_p); }
+        else                   { rest[0] = 0;         }
 
         return 1;  // start matches and remainder is allowed
     }
-    else if (strlen(str) == cmp_len) { return 1; }  // exact match
-    else                             { return 0; }
+    else { return (str_p[0] == 0); }  // exact match required
 }
 
 bool start(const char *str, const char *pre, const char *opt, const char *suf, char *rest)
@@ -143,12 +142,17 @@ bool start(const char *str, const char *pre, const char *opt, const char *suf, c
     int opt_len = strlen(opt);
     int suf_len = strlen(suf);
 
-    if      (strncasecmp(str, pre, pre_len) == 0 && strncasecmp(str + pre_len, opt, opt_len) == 0 && strncasecmp(str + pre_len + opt_len, suf, suf_len) == 0) { return start_match(str, rest, pre_len + opt_len + suf_len); }
-    else if (strncasecmp(str, pre, pre_len) == 0 && strncasecmp(str + pre_len, suf, suf_len) == 0)                                                            { return start_match(str, rest, pre_len + suf_len);           }
-    else                                                                                                                                                      { return 0;                                                   }
+    if (strncasecmp(str, pre, pre_len) == 0)
+    {
+        if      (strncasecmp(str + pre_len, opt, opt_len) == 0 && strncasecmp(str + pre_len + opt_len, suf, suf_len) == 0) { return start_match(str + pre_len + opt_len + suf_len, rest); }
+        else if (strncasecmp(str + pre_len, suf, suf_len) == 0)                                                            { return start_match(str + pre_len + suf_len,           rest); }
+    }
+
+    return 0;
 }
 
 bool start(const char *str, const char *cmp, char *rest)                       { return start(str, cmp, "",  "",  rest); }
+bool start(const char *str, const char *pre, const char *opt, char *rest)      { return start(str, pre, opt, "",  rest); }
 bool equal(const char *str, const char *cmp)                                   { return start(str, cmp, "",  "",  NULL); }
 bool equal(const char *str, const char *pre, const char *opt)                  { return start(str, pre, opt, "",  NULL); }
 bool equal(const char *str, const char *pre, const char *opt, const char *suf) { return start(str, pre, opt, suf, NULL); }

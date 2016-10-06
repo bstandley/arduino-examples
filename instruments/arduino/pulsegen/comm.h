@@ -92,6 +92,13 @@ void send_micros(const long value, const bool eol)
     else { send_str("000000", eol); }
 }
 
+void send_lan(const byte mode, const bool eol)
+{
+    send_str(mode == LAN_OFF  ? "OFF"    :
+             mode == LAN_DHCP ? "DHCP"   :
+                                "STATIC", eol);
+}
+
 void send_mac(const byte *addr, const bool eol)
 {
     for (int i = 0; i < 5; i++)
@@ -102,14 +109,14 @@ void send_mac(const byte *addr, const bool eol)
     send_hex(addr[5], eol);
 }
 
-void send_ip(const byte *addr, const bool eol)
+void send_ip(const uint32_t addr, const bool eol)
 {
     for (int i = 0; i < 3; i++)
     {
-        send_int(addr[i], NOEOL);
+        send_int((addr >> (i*8)) & 0xFF, NOEOL);
         send_str(".",     NOEOL);
     }
-    send_int(addr[3], eol);
+    send_int((addr >> 24) & 0xFF, eol);
 }
 
 void send_str(const char *str)     { send_str(str,      EOL); }
@@ -117,5 +124,6 @@ void send_eps(const int epa)       { send_eps(epa,      EOL); }
 void send_int(const long value)    { send_int(value,    EOL); }
 void send_hex(const long value)    { send_hex(value,    EOL); }
 void send_micros(const long value) { send_micros(value, EOL); }
+void send_lan(const byte mode)     { send_lan(mode,     EOL); }
 void send_mac(const byte *addr)    { send_mac(addr,     EOL); }
-void send_ip(const byte *addr)     { send_ip(addr,      EOL); }
+void send_ip(const uint32_t addr)  { send_ip(addr,      EOL); }

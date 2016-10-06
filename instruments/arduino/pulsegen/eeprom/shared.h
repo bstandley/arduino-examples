@@ -36,10 +36,10 @@ struct SCPI
 struct SCPI_LAN
 {
     byte mode;                // :SYSTem:COMMunicate:LAN:MODE            OFF, DHCP, or STATic
-    byte mac            [6];  // :SYSTem:COMMunicate:LAN:MAC             MAC address (eg. 1A:2B:3C:4D:5E:6F)
-    byte ip_static      [4];  // :SYSTem:COMMunicate:LAN:IP:STATic       static ip address (eg. 192.168.0.100)
-    byte gateway_static [4];  // :SYSTem:COMMunicate:LAN:GATEway:STATic  static gateway address
-    byte subnet_static  [4];  // :SYSTem:COMMunicate:LAN:SUBnet:STATic   static subnet mask
+    byte mac[6];              // :SYSTem:COMMunicate:LAN:MAC             MAC address (eg. 1A:2B:3C:4D:5E:6F)
+    uint32_t ip_static;       // :SYSTem:COMMunicate:LAN:IP:STATic       static ip address (eg. 192.168.0.100)
+    uint32_t gateway_static;  // :SYSTem:COMMunicate:LAN:GATEway:STATic  static gateway address
+    uint32_t subnet_static;   // :SYSTem:COMMunicate:LAN:SUBnet:STATic   static subnet mask
 };
 
 // notes on SCPI settings:
