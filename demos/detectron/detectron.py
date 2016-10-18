@@ -4,8 +4,8 @@ import datetime
 
 basevars_full   = ['*IDN',':OUTPUT:SERIAL:ENABLE', ':OUTPUT:UDP:ENABLE', ':OUTPUT:UDP:DESTINATION', ':OUTPUT:UDP:PORT']
 basevars_short  = ['*IDN',':OUT:SER:EN',           ':OUT:UDP:EN',        ':OUT:UDP:DEST',           ':OUT:UDP:PORT']
-inputvars_full  = [':MODE', ':INVERT', ':COUNT']
-inputvars_short = [':MOD', ':INV', ':COUN']
+inputvars_full  = [':MODE', ':PULLUP', ':INVERT', ':COUNT', ':VALUE']
+inputvars_short = [':MOD',  ':PULL',   ':INV',    ':COUN',  ':VAL']
 lanvars_full    = [':SYSTEM:COMMUNICATE:LAN:MODE', ':SYSTEM:COMMUNICATE:LAN:MAC', ':SYSTEM:COMMUNICATE:LAN:IP', ':SYSTEM:COMMUNICATE:LAN:GATEWAY', ':SYSTEM:COMMUNICATE:LAN:SUBNET', ':SYSTEM:COMMUNICATE:LAN:IP:STATIC', ':SYSTEM:COMMUNICATE:LAN:GATEWAY:STATIC', ':SYSTEM:COMMUNICATE:LAN:SUBNET:STATIC']
 lanvars_short   = [':SYST:COMM:LAN:MOD',           ':SYST:COMM:LAN:MAC',          ':SYST:COMM:LAN:IP',          ':SYST:COMM:LAN:GATE',             ':SYST:COMM:LAN:SUB',             ':SYST:COMM:LAN:IP:STAT',            ':SYST:COMM:LAN:GATE:STAT',               ':SYST:COMM:LAN:SUB:STAT']
 

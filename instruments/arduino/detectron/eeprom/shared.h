@@ -21,6 +21,7 @@
 struct SCPI
 {
     byte     input_mode   [NCHAN];  // :INput<n>:MODe           OFF, RISing, FALLing, CHAnge
+    bool     input_pullup [NCHAN];  // :INput<n>:PULLup         0 = floating input, 1 = enable pull-up resistor
     bool     input_invert [NCHAN];  // :INput<n>:INVert         0 = non-inverting, 1 = inverting
     bool     output_serial;         // :OUTput:SERial:ENable    0 = disabled, 1 = enabled
     bool     output_udp;            // :OUTput:UDP:ENable       0 = disabled, 1 = enabled
@@ -48,6 +49,7 @@ void scpi_default(SCPI &s)
     for (int n = 0; n < NCHAN; n++)
     {
         s.input_mode[n]   = (n == 0 ? RISING : 0);  // 0 means OFF, other options are non-zero
+        s.input_pullup[n] = 1;
         s.input_invert[n] = 0;
     }
 
