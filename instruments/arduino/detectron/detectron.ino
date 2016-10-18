@@ -32,7 +32,9 @@ uint32_t scpi_lan_ip;              // :SYSTem:COMMunicate:LAN:IP       current i
 uint32_t scpi_lan_gateway;         // :SYSTem:COMMunicate:LAN:GATEway  current gateway address
 uint32_t scpi_lan_subnet;          // :SYSTem:COMMunicate:LAN:SUBnet   current subnet mask
 
-bool x_old[NCHAN];
+byte mask_rising;
+byte mask_falling;
+byte y_old;
 
 #ifdef LAN
 EthernetServer server(PORT);
@@ -46,12 +48,14 @@ void setup()
 
     EEPROM.get(EPA_SCPI, scpi);
 
+    update_masks();
+
     for (int n = 0; n < NCHAN; n++)
     {
         pinMode(conf_input_pin[n], INPUT_PULLUP);  // TODO: make configurable
         scpi_input_count[n] = 0;
     }
-    update_inputs(x_old);
+    y_old = read_inputs();
 
     Serial.begin(9600);
 
@@ -110,49 +114,44 @@ void loop()
     }
 #endif
 
-    bool x_new[NCHAN];
-    update_inputs(x_new);
-
-    bool event = 0;
-    for (int n = 0; n < NCHAN; n++)
+    byte y_new   = read_inputs();
+    byte y_event = (~y_old &  y_new & mask_rising) |
+                   ( y_old & ~y_new & mask_falling);
+    if (y_event)
     {
-        if (x_old[n] != x_new[n] && ((scpi.input_mode[n] == RISING  && x_new[n]) ||
-                                     (scpi.input_mode[n] == FALLING && x_old[n]) ||
-                                     (scpi.input_mode[n] == CHANGE)))
-        {
-            scpi_input_count[n]++;
-            event = 1;
-        }
+        send_event(y_old, y_new);
+        update_counts(y_event);
     }
-
-    if (event) { send_event(pack_bits(x_old), pack_bits(x_new)); }
-
-    for (int n = 0; n < NCHAN; n++) { x_old[n] = x_new[n]; }
+    y_old = y_new;
 
     delay(1);
 }
 
-byte pack_bits(const bool *x)
+byte read_inputs()
 {
-    byte rv = 0;
-    for (int n = 0; n < NCHAN; n++) { rv |= x[n] << n; }
-    return rv;
+    byte y = 0;
+    for (int n = 0; n < NCHAN; n++)
+    {
+        bool x = digitalRead(conf_input_pin[n]);
+        y |= (scpi.input_invert[n] ? !x : x) << n;
+    }
+    return y;
 }
 
-void send_event(const byte y_old, const byte y_new)
+void send_event(const byte y1, const byte y2)
 {
     if (scpi.output_serial)
     {
-        Serial.write(y_old);
-        Serial.write(y_new);
+        Serial.write(y1);
+        Serial.write(y2);
         Serial.println();
     }
 
     if (scpi.output_udp)
     {
         udp.beginPacket(scpi.output_udp_dest, scpi.output_udp_port);
-        udp.write(y_old);
-        udp.write(y_new);
+        udp.write(y1);
+        udp.write(y2);
         udp.endPacket();
     }
 }
@@ -180,13 +179,21 @@ void sim_events()
 
 // runtime update functions:
 
-void update_inputs(bool *x)
+void update_masks()
 {
+    mask_rising  = 0;
+    mask_falling = 0;
+
     for (int n = 0; n < NCHAN; n++)
     {
-        bool x_raw = digitalRead(conf_input_pin[n]);
-        x[n] = scpi.input_invert[n] ? !x_raw : x_raw;
+        if (scpi.input_mode[n] == RISING  || scpi.input_mode[n] == CHANGE) { mask_rising  |= 0x1 << n; }
+        if (scpi.input_mode[n] == FALLING || scpi.input_mode[n] == CHANGE) { mask_falling |= 0x1 << n; }
     }
+}
+
+void update_counts(const byte y_event)
+{
+    for (int n = 0; n < NCHAN; n++) { if ((y_event >> n) & 0x1) { scpi_input_count[n]++; } }
 }
 
 void update_lan()
@@ -241,7 +248,8 @@ void parse_msg(const char *msg)
 
     if (update)
     {
-        update_inputs(x_old);
+        update_masks();
+        y_old = read_inputs();
         send_str("OK");
     }
 }
@@ -260,26 +268,27 @@ void parse_input(const int n, const char *msg)
     }
     else if (start(msg, "MOD", "e", " ",   rest))
     {
-        if      (equal(rest, "OFF"))              { scpi.input_mode[n] = 0;       send_str("OK"); }
-        else if (equal(rest, "RIS", "ing"))       { scpi.input_mode[n] = RISING;  send_str("OK"); }
-        else if (equal(rest, "FALL", "ing"))      { scpi.input_mode[n] = FALLING; send_str("OK"); }
-        else if (equal(rest, "CHA", "nge"))       { scpi.input_mode[n] = CHANGE;  send_str("OK"); }
-        else                                      { send_eps(EPA_REPLY_INVALID_ARG);              }
+        if      (equal(rest, "OFF"))              { scpi.input_mode[n] = 0;       update = 1; }
+        else if (equal(rest, "RIS", "ing"))       { scpi.input_mode[n] = RISING;  update = 1; }
+        else if (equal(rest, "FALL", "ing"))      { scpi.input_mode[n] = FALLING; update = 1; }
+        else if (equal(rest, "CHA", "nge"))       { scpi.input_mode[n] = CHANGE;  update = 1; }
+        else                                      { send_eps(EPA_REPLY_INVALID_ARG);          }
     }
-    else if (equal(msg, "INV", "ert", "?"))       { send_hex(scpi.input_invert[n]);               }
+    else if (equal(msg, "INV", "ert", "?"))       { send_hex(scpi.input_invert[n]);           }
     else if (start(msg, "INV", "ert", " ", rest))
     {
-        if      (equal(rest, "1"))                { scpi.input_invert[n] = 1; update = 1;         }
-        else if (equal(rest, "0"))                { scpi.input_invert[n] = 0; update = 1;         }
-        else                                      { send_eps(EPA_REPLY_INVALID_ARG);              }
+        if      (equal(rest, "1"))                { scpi.input_invert[n] = 1;     update = 1; }
+        else if (equal(rest, "0"))                { scpi.input_invert[n] = 0;     update = 1; }
+        else                                      { send_eps(EPA_REPLY_INVALID_ARG);          }
     }
-    else if (equal(msg, "COUN", "t", "?"))        { send_int(scpi_input_count[n]);                }
-    else if (start(msg, "COUN", "t", " ",  rest)) { send_eps(EPA_REPLY_READONLY);                 }
-    else                                          { send_eps(EPA_REPLY_INVALID_CMD);              }
+    else if (equal(msg, "COUN", "t", "?"))        { send_int(scpi_input_count[n]);            }
+    else if (start(msg, "COUN", "t", " ",  rest)) { send_eps(EPA_REPLY_READONLY);             }
+    else                                          { send_eps(EPA_REPLY_INVALID_CMD);          }
 
     if (update)
     {
-        update_inputs(x_old);
+        update_masks();
+        y_old = read_inputs();
         send_str("OK");
     }
 }
