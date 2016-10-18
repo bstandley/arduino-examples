@@ -2,12 +2,12 @@
 
 const unsigned long conf_commit                    = 0x1234abc;  // edit to match current commit before compile/download!
 const char          conf_idn               [ESLEN] = "SDI PULSE GENERATOR";
-const char          conf_reply_check       [ESLEN] = "WARNING: CHECK CHANNEL TIMING";
 const char          conf_reply_readonly    [ESLEN] = "ERROR: READ-ONLY SETTING";
 const char          conf_reply_invalid_cmd [ESLEN] = "ERROR: INVALID COMMAND OR QUERY";
 const char          conf_reply_invalid_arg [ESLEN] = "ERROR: INVALID ARGUMENT";
 const char          conf_reply_reboot_req  [ESLEN] = "INFO: REBOOT TO APPLY LAN SETTINGS";
 const char          conf_reply_rebooting   [ESLEN] = "INFO: REBOOTING . . .";
+const char          conf_reply_check       [ESLEN] = "WARNING: CHECK CHANNEL TIMING";
 
 void setup()
 {
@@ -22,12 +22,12 @@ void setup()
     EEPROM.put(EPA_SCPI_LAN, scpi_lan);
 
     EEPROM.put(EPA_IDN,               conf_idn);
-    EEPROM.put(EPA_REPLY_CHECK,       conf_reply_check);
     EEPROM.put(EPA_REPLY_READONLY,    conf_reply_readonly);
     EEPROM.put(EPA_REPLY_INVALID_CMD, conf_reply_invalid_cmd);
     EEPROM.put(EPA_REPLY_INVALID_ARG, conf_reply_invalid_arg);
     EEPROM.put(EPA_REPLY_REBOOT_REQ,  conf_reply_reboot_req);
     EEPROM.put(EPA_REPLY_REBOOTING,   conf_reply_rebooting);
+    EEPROM.put(EPA_REPLY_CHECK,       conf_reply_check);
 
     Serial.begin(9600);
 }
@@ -63,12 +63,12 @@ void loop()
     Serial.println("/...");
 
     check_eps(EPA_IDN,               "EPA_IDN");
-    check_eps(EPA_REPLY_CHECK,       "EPA_CHECK");
     check_eps(EPA_REPLY_READONLY,    "EPA_REPLY_READONLY");
     check_eps(EPA_REPLY_INVALID_CMD, "EPA_REPLY_INVALID_CMD");
     check_eps(EPA_REPLY_INVALID_ARG, "EPA_REPLY_INVALID_ARG");
     check_eps(EPA_REPLY_REBOOT_REQ,  "EPA_REPLY_REBOOT_REQ");
     check_eps(EPA_REPLY_REBOOTING,   "EPA_REPLY_REBOOTING");
+    check_eps(EPA_REPLY_CHECK,       "EPA_CHECK");
 
     delay(4000);
 }

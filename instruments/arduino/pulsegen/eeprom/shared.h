@@ -12,12 +12,12 @@
 #define EPA_SCPI              4
 #define EPA_SCPI_LAN          80
 #define EPA_IDN               100
-#define EPA_REPLY_CHECK       140
-#define EPA_REPLY_READONLY    180
-#define EPA_REPLY_INVALID_CMD 220
-#define EPA_REPLY_INVALID_ARG 260
-#define EPA_REPLY_REBOOT_REQ  320
-#define EPA_REPLY_REBOOTING   360
+#define EPA_REPLY_READONLY    140
+#define EPA_REPLY_INVALID_CMD 180
+#define EPA_REPLY_INVALID_ARG 220
+#define EPA_REPLY_REBOOT_REQ  260
+#define EPA_REPLY_REBOOTING   300
+#define EPA_REPLY_CHECK       340
 
 struct SCPI
 {
@@ -35,7 +35,7 @@ struct SCPI
 
 struct SCPI_LAN
 {
-    byte mode;                // :SYSTem:COMMunicate:LAN:MODE            OFF, DHCP, or STATic
+    byte mode;                // :SYSTem:COMMunicate:LAN:MODe            OFF, DHCP, or STATic
     byte mac[6];              // :SYSTem:COMMunicate:LAN:MAC             MAC address (eg. 1A:2B:3C:4D:5E:6F)
     uint32_t ip_static;       // :SYSTem:COMMunicate:LAN:IP:STATic       static ip address (eg. 192.168.0.100)
     uint32_t gateway_static;  // :SYSTem:COMMunicate:LAN:GATEway:STATic  static gateway address

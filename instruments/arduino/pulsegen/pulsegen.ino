@@ -38,7 +38,7 @@ volatile bool scpi_trig_armed;          // :TRIGger:ARMed                   arme
 volatile bool scpi_trig_ready;          // :TRIGger:READY                   ready (armed plus at least one valid channel)
 bool          scpi_pulse_valid[NCHAN];  // :PULSe<n>:VALid                  output channel has valid/usable pulse sequence
 #ifdef LAN
-byte          scpi_lan_mode;            // :SYSTem:COMMunicate:LAN:MODE     actual mode (writes go to scpi_lan.mode)
+byte          scpi_lan_mode;            // :SYSTem:COMMunicate:LAN:MODe     actual mode (writes go to scpi_lan.mode)
 #endif
 uint32_t      scpi_lan_ip;              // :SYSTem:COMMunicate:LAN:IP       current ip address
 uint32_t      scpi_lan_gateway;         // :SYSTem:COMMunicate:LAN:GATEway  current gateway address
@@ -297,7 +297,7 @@ void parse_msg(const char *msg)
         send_hex(eeprom_commit, NOEOL);
         send_str(")");
     }
-    else if (equal(msg, "*TRG"))                    { run_sw_trig();              send_str("OK"); }
+    else if (equal(msg, "*TRG"))                    { send_str("OK"); run_sw_trig();              }  // reply first, in case pulse sequence is longer than client's serial timeout
     else if (equal(msg, "*SAV"))                    { EEPROM.put(EPA_SCPI, scpi); send_str("OK"); }
     else if (equal(msg, "*RCL"))                    { EEPROM.get(EPA_SCPI, scpi); update = 1;     }
     else if (equal(msg, "*RST"))                    { scpi_default(scpi);         update = 1;     }
@@ -506,7 +506,7 @@ void parse_lan(const char *msg)
     SCPI_LAN scpi_lan;
     EEPROM.get(EPA_SCPI_LAN, scpi_lan);
 
-    if (equal(msg, "MODE?"))
+    if (equal(msg, "MOD", "e", "?"))
     {
         send_lan(scpi_lan.mode, NOEOL);
 #ifdef LAN
@@ -517,7 +517,7 @@ void parse_lan(const char *msg)
         send_str(" (ACTUAL: NOT AVAILABLE)");
 #endif
     }
-    else if (start(msg, "MODE ", rest))
+    else if (start(msg, "MOD", "e", " ", rest))
     {
         if      (equal(rest, "OFF"))          { scpi_lan.mode = LAN_OFF;    update = 1;                                }
         else if (equal(rest, "DHCP"))         { scpi_lan.mode = LAN_DHCP;   update = 1;                                }
